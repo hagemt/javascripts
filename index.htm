@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+
+<head>
+	<style>
+
+body {
+	background-image: url('http://tachyus.com/img/bg1.jpg');
+	color: #fff;
+}
+
+#container {
+	background-color: #999;
+	border: 1px solid #fff;
+	margin: 16px auto;
+	padding: 8px;
+	text-align: center;
+	width: 90%;
+}
+
+#figure1 {
+	border: 1px solid #000;
+	display: block-inline;
+}
+
+	</style>
+</head>
+
+<body>
+
+<script src="d3.v3.js"></script>
+
+<div id="container">
+	<span>Hello, World!</span><br />
+	<svg id="figure1"></svg>
+</div>
+
+<script>
+
+var percent = function(min, max) {
+	return d3.scale.linear().domain(min, max).range(0, 100);
+};
+
+Array.min = function(array) {
+	return Math.min.apply(Math, array);
+};
+
+Array.max = function(array) {
+	return Math.max.apply(Math, array);
+};
+
+///
+
+function draw(canvas, t, xy) {
+
+var xs = [], ys = [];
+xy.map(function(point) {
+	xs.push(point.x);
+	ys.push(point.y);
+});
+
+var triples = [];
+for (var i = 0; i < input.length; ++i) {
+	triples.push([ t[i], xs[i], ys[i] ]);
+}
+
+var fudge = 50;
+
+var w = d3.scale.linear()
+	.domain([ Array.min(xs), Array.max(xs) ])
+	.range([ fudge, canvas.attr("width") - fudge ])
+;
+
+var h = d3.scale.linear()
+	.domain([ Array.min(ys), Array.max(ys) ])
+	.range([ fudge, canvas.attr("height") - fudge ])
+;
+
+var model = canvas.selectAll('circle').data(triples).enter();
+
+model.append('circle')
+	.attr("cx", function(triple) { return w(triple[1]); })
+	.attr("cy", function(triple) { return h(triple[2]); })
+	.attr("r", 5)
+;
+
+canvas.selectAll('circle').transition().duration(3000).delay(3000)
+	.attr("r", fudge);
+
+// use triple[0] as (text) label
+
+}
+
+///
+
+var svg = d3.select('#figure1')
+	.attr("width", 600)
+	.attr("height", 600)
+;
+
+var circle = function(t) {
+	var point = {};
+	point.y = Math.sin(t);
+	point.x = Math.cos(t);
+	return point;
+};
+
+// mock data and invoke
+var input = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+var output = input.map(circle);
+draw(svg, input, output);
+
+</script>
+
+</body>

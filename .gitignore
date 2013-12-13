@@ -1,3 +1,4 @@
+# Shh. Not actually a Haskell project.
 dist
 cabal-dev
 *.o
@@ -5,3 +6,5 @@ cabal-dev
 *.chi
 *.chs.h
 .virthualenv
+
+d3*.js
