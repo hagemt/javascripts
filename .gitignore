@@ -7,4 +7,7 @@ cabal-dev
 *.chs.h
 .virthualenv
 
-d3*.js
+/backbone*
+/d3*
+/jquery*
+/underscore*
