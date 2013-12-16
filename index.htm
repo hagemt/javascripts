@@ -1,101 +1,231 @@
 <!DOCTYPE html>
 
 <head>
-	<style>
+<style>
 
 body {
-	color: #fff;
+	background-color: #666;
 }
 
-#container {
-	background-color: #999;
-	border: 1px solid #fff;
+span, label {
+	color: #000;
+	font: 1em normal "Courier New", monospace;
+}
+
+svg {
+	border: 1px solid #000;
+	display: block-inline;
+	margin: 8px;
+}
+
+div#header, div#container {
+	background-color: #ccc;
+	border: 3px double #000;
 	margin: 16px auto;
 	padding: 8px;
 	text-align: center;
 	width: 90%;
 }
 
-#figure1 {
-	border: 1px solid #000;
-	display: block-inline;
-}
-
-	</style>
+</style>
 </head>
 
 <body>
 
-<script src="d3.v3.js"></script>
+<script src="d3.v3.js" charset="utf-8"></script>
+<script src="underscore.js"></script>
+
+<div id="header">
+	<span>Some examples using <abbr title="Data Driven Documents">d3.js</abbr> follow:</span>
+</div>
 
 <div id="container">
-	<span>Hello, World!</span><br />
-	<svg id="figure1"></svg>
+	<label for="figure1">Figure 1: Circle of Circles (Expand/Hover)</label><br />
+	<svg class="figure" id="figure1"></svg><hr />
+	<label for="figure2">Figure 2: Load rhombus.json with Splines</label><br />
+	<svg class="figure" id="figure2"></svg><hr />
+	<span>Made by <a href="onetooneandon.to">Tor E Hagemann</a>,</span>
+	<span>in December 2013, under:<span>
+	<a href="http://opensource.org/licenses/BSD-2-Clause">(Simple BSD License)</a>
 </div>
 
 <script>
 
+// a linear scaling function from [ min, max ] -> [ 0, 100 ]
 var percent = function(min, max) {
 	return d3.scale.linear().domain(min, max).range(0, 100);
 };
 
-Array.min = function(array) {
-	return Math.min.apply(Math, array);
+// a linear scaling function using more information
+var scale = function(data, offset, limit) {
+	return d3.scale.linear()
+		.domain([ _.min(data), _.max(data) ])
+		.range([ offset, limit - offset ]);
+}
+
+// modify selection prototype to have "promote" function
+d3.selection.prototype.bringToFront = function() {
+	// SVG draws in markup-order, so this will ensure we're first
+	return this.each(function() {
+		this.parentNode.appendChild(this);
+	});
 };
 
-Array.max = function(array) {
-	return Math.max.apply(Math, array);
-};
+// essentially an SVG line element factory
+var linearSpline = d3.svg.line()
+	.x(function(datum) { return datum.x; })
+	.y(function(datum) { return datum.y; })
+	.interpolate('linear');
 
 ///
 
-function draw(canvas, t, xy) {
+// arguments can change, but here's something
+// the first / last specify target / options
+function dots(canvas, ts, xy, options) {
 
-var xs = [], ys = [];
-xy.map(function(point) {
-	xs.push(point.x);
-	ys.push(point.y);
-});
+	/* extract raw arrays from points */
+	var xs = [], ys = [];
+	xy.map(function(point) {
+		xs.push(point.x);
+		ys.push(point.y);
+	});
 
-var triples = [];
-for (var i = 0; i < input.length; ++i) {
-	triples.push([ t[i], xs[i], ys[i] ]);
-}
+	/* re-pack t, xy into triples */
+	var triples = [];
+	for (var i = 0; i < xy.length; ++i) {
+		triples.push([ ts[i], xs[i], ys[i] ]);
+	}
 
-var fudge = 50;
+	/* default to 8px radii */
+	var radius = options.r || 8, offset = radius * 2;
 
-var w = d3.scale.linear()
-	.domain([ Array.min(xs), Array.max(xs) ])
-	.range([ fudge, canvas.attr("width") - fudge ])
-;
+	/* define some scaling functions as per the environment */
+	var w = scale(xs, offset, canvas.attr('width'));
+	var h = scale(ys, offset, canvas.attr('height'));
 
-var h = d3.scale.linear()
-	.domain([ Array.min(ys), Array.max(ys) ])
-	.range([ fudge, canvas.attr("height") - fudge ])
-;
+	/* our model consists of the data in "rows" */
+	var model = canvas.selectAll('g').data(triples);
 
-var model = canvas.selectAll('circle').data(triples).enter();
+	/* position layers according to the data w/ focus */
+	var layers = model.enter().append('g')
+		.attr('transform', function(triple) {
+			var x = w(triple[1]), y = h(triple[2]);
+			return String.concat('translate', '(', x, ',', y, ')');
+		})
+		.on('mouseover', function(event) {
+			d3.select(this).bringToFront();
+		})
+	;
 
-model.append('circle')
-	.attr("cx", function(triple) { return w(triple[1]); })
-	.attr("cy", function(triple) { return h(triple[2]); })
-	.attr("r", 5)
-;
+	/* Create a circle w/ label for each layer */
+	var circles = layers.append('circle');
 
-canvas.selectAll('circle').transition().duration(3000).delay(3000)
-	.attr("r", fudge);
+	/* fancy way to load circles' attributes from options */
+	for (var attr in options) {
+		circles.attr(attr, options[attr]);
+	}
 
-// use triple[0] as (text) label
+	/* FIXME ...I don't know if I like this effect all the time... */
+	circles
+		.on('mouseover', function(event) {
+			d3.select(this)
+				.attr('stroke', 'red')
+				.transition().duration(500)
+					.attr('r', radius * 1.25);
+			d3.select(this.parentNode).select('text')
+				.transition().duration(250).delay(250)
+					.attr('fill-opacity', 1.0);
+		})
+		.on('mouseout', function(event) {
+			d3.select(this)
+				.attr('stroke', 'green')
+				.transition().duration(500)
+					.attr('r', radius);
+			d3.select(this.parentNode).select('text')
+				.transition().duration(250)
+					.attr('fill-opacity', 0.0);
+		})
+	;
+	/* now, all circles should change size and stroke when hover'd */
 
+	/* labels always get a white label (t=t[i]) that's initially hidden */
+	var labels = layers.append('text')
+		//.attr('dy', 0)
+		.attr('dx', -radius)
+		.attr('fill', 'white')
+		.attr('fill-opacity', 0.0)
+		.text(function(triple) { return String.concat('t=',triple[0]); });
+
+	/* Future use: live-updating on push, etc. */
+	model.exit().remove();
+
+	/* Pass along to allow out-of-function calls */
+	return model;
 }
 
 ///
 
-var svg = d3.select('#figure1')
-	.attr("width", 600)
-	.attr("height", 600)
-;
+// Wheeeee! FP is fun!
+var collect = function(field) {
+	// this outer routine specifies what to extract
+	return function(base, current) {
+		// this inner routine specifies from where to where
+		base.push(current[field]);
+		// remember to build!
+		return base;
+	}
+}
 
+// But sometimes complicated... (think 'filter') ...not useful?
+var applying = function(routine) {
+	return function(base, current) {
+		var obj = {};
+		// populate an object, with fields copied (but passed through routine)
+		for (var field in current) {
+			obj[field] = routine(current[field]);
+		}
+		// sort of a backwards 'collect'
+		base.push(obj);
+		return base;
+	}
+}
+
+function load(canvas, file, options) {
+	var drawing, ts, xs, ys;
+	d3.json(file, function(error, data) {
+		if (error) console.warn(error);
+		// reshape some data to draw the dots
+		ts = data.reduce(collect('t'), []);
+		xs = data.reduce(collect('x'), []);
+		ys = data.reduce(collect('y'), []);
+		drawing = dots(canvas, ts, data, options);
+		// a bit redundant (TODO DRY-up later) scaling:
+		var offset = (options.r || 5) * 2, scaled = [];
+		var scalex = scale(xs, offset, canvas.attr('width'));
+		var scaley = scale(ys, offset, canvas.attr('height'));
+		data.map(function(datum) {
+			var point = {};
+			point.x = scalex(datum.x);
+			point.y = scaley(datum.y);
+			scaled.push(point);
+		});
+		// add a path drawn betwen the xy-points
+		canvas.append('path')
+			.attr('d', linearSpline(scaled))
+			.attr('fill', 'none')
+			.attr('stroke', 'white')
+			.attr('stroke-width', 5);
+		canvas.selectAll('g').each(function() {
+			// probably could use 'apply'
+			d3.select(this).bringToFront();
+		});
+	});
+	return drawing;
+}
+
+///
+
+// creates objects (points on a circle)
 var circle = function(t) {
 	var point = {};
 	point.y = Math.sin(t);
@@ -104,9 +234,37 @@ var circle = function(t) {
 };
 
 // mock data and invoke
-var input = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+var input = _.range(1,19);
 var output = input.map(circle);
-draw(svg, input, output);
+
+var options1 = { r: 64 };
+options1["stroke"] = 'green';
+options1["stroke-width"] = 5;
+
+var options2 = { r: 6 };
+options2["stoke"] = 'black';
+options2["stroke-width"] = 3;
+
+///
+
+var figure1 = d3.select('#figure1')
+	.attr('width', 600)
+	.attr('height', 600);
+var drawing1 = dots(figure1, input, output, options1);
+
+// add a three-second-long shrink after 1.5 seconds...
+drawing1.selectAll('circle')
+	.transition().duration(3000).delay(1500)
+		.attr('stroke', 'yellow')
+		.attr('r', 50);
+// ...just to prove we can
+
+///
+
+var figure2 = d3.select('#figure2')
+	.attr('width', 600)
+	.attr('height', 300);
+var drawing2 = load(figure2, 'rhombus.json', options2);
 
 </script>
 
