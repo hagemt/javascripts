@@ -51,30 +51,32 @@ div#header, div#container {
 
 <script>
 
+// FIXME where to: use strict;
+
 // a linear scaling function from [ min, max ] -> [ 0, 100 ]
-var percent = function(min, max) {
+var percent = function (min, max) {
 	return d3.scale.linear().domain(min, max).range(0, 100);
 };
 
 // a linear scaling function using more information
-var scale = function(data, offset, limit) {
+var scale = function (data, offset, limit) {
 	return d3.scale.linear()
 		.domain([ _.min(data), _.max(data) ])
 		.range([ offset, limit - offset ]);
-}
+};
 
 // modify selection prototype to have "promote" function
-d3.selection.prototype.bringToFront = function() {
+d3.selection.prototype.bringToFront = function (/* FIXME this? */) {
 	// SVG draws in markup-order, so this will ensure we're first
-	return this.each(function() {
+	return this.each(function () {
 		this.parentNode.appendChild(this);
 	});
 };
 
 // essentially an SVG line element factory
 var linearSpline = d3.svg.line()
-	.x(function(datum) { return datum.x; })
-	.y(function(datum) { return datum.y; })
+	.x(function (datum) { return datum.x; })
+	.y(function (datum) { return datum.y; })
 	.interpolate('linear');
 
 ///
@@ -85,7 +87,7 @@ function dots(canvas, ts, xy, options) {
 
 	/* extract raw arrays from points */
 	var xs = [], ys = [];
-	xy.map(function(point) {
+	xy.map(function (point) {
 		xs.push(point.x);
 		ys.push(point.y);
 	});
@@ -108,11 +110,11 @@ function dots(canvas, ts, xy, options) {
 
 	/* position layers according to the data w/ focus */
 	var layers = model.enter().append('g')
-		.attr('transform', function(triple) {
+		.attr('transform', function (triple) {
 			var x = w(triple[1]), y = h(triple[2]);
-			return String.concat('translate', '(', x, ',', y, ')');
+			return [ 'translate', '(', x, ',', y, ')' ].join('');
 		})
-		.on('mouseover', function(event) {
+		.on('mouseover', function () {
 			d3.select(this).bringToFront();
 		})
 	;
@@ -127,7 +129,7 @@ function dots(canvas, ts, xy, options) {
 
 	/* FIXME ...I don't know if I like this effect all the time... */
 	circles
-		.on('mouseover', function(event) {
+		.on('mouseover', function () {
 			d3.select(this)
 				.attr('stroke', 'red')
 				.transition().duration(500)
@@ -136,7 +138,7 @@ function dots(canvas, ts, xy, options) {
 				.transition().duration(250).delay(250)
 					.attr('fill-opacity', 1.0);
 		})
-		.on('mouseout', function(event) {
+		.on('mouseout', function () {
 			d3.select(this)
 				.attr('stroke', 'green')
 				.transition().duration(500)
@@ -154,7 +156,7 @@ function dots(canvas, ts, xy, options) {
 		.attr('dx', -radius)
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0.0)
-		.text(function(triple) { return String.concat('t=',triple[0]); });
+		.text(function (triple) { return [ 't', triple[0] ].join('='); });
 
 	/* Future use: live-updating on push, etc. */
 	model.exit().remove();
@@ -166,19 +168,19 @@ function dots(canvas, ts, xy, options) {
 ///
 
 // Wheeeee! FP is fun!
-var collect = function(field) {
+var collect = function (field) {
 	// this outer routine specifies what to extract
-	return function(base, current) {
+	return function (base, current) {
 		// this inner routine specifies from where to where
 		base.push(current[field]);
 		// remember to build!
 		return base;
-	}
-}
+	};
+};
 
 // But sometimes complicated... (think 'filter') ...not useful?
-var applying = function(routine) {
-	return function(base, current) {
+var applying = function (routine) {
+	return function (base, current) {
 		var obj = {};
 		// populate an object, with fields copied (but passed through routine)
 		for (var field in current) {
@@ -187,12 +189,12 @@ var applying = function(routine) {
 		// sort of a backwards 'collect'
 		base.push(obj);
 		return base;
-	}
-}
+	};
+};
 
 function load(canvas, file, options) {
 	var drawing, ts, xs, ys;
-	d3.json(file, function(error, data) {
+	d3.json(file, function (error, data) {
 		if (error) console.warn(error);
 		// reshape some data to draw the dots
 		ts = data.reduce(collect('t'), []);
@@ -203,7 +205,7 @@ function load(canvas, file, options) {
 		var offset = (options.r || 5) * 2, scaled = [];
 		var scalex = scale(xs, offset, canvas.attr('width'));
 		var scaley = scale(ys, offset, canvas.attr('height'));
-		data.map(function(datum) {
+		data.map(function (datum) {
 			var point = {};
 			point.x = scalex(datum.x);
 			point.y = scaley(datum.y);
@@ -215,7 +217,7 @@ function load(canvas, file, options) {
 			.attr('fill', 'none')
 			.attr('stroke', 'white')
 			.attr('stroke-width', 5);
-		canvas.selectAll('g').each(function() {
+		canvas.selectAll('g').each(function () {
 			// probably could use 'apply'
 			d3.select(this).bringToFront();
 		});
@@ -226,7 +228,7 @@ function load(canvas, file, options) {
 ///
 
 // creates objects (points on a circle)
-var circle = function(t) {
+var circle = function (t) {
 	var point = {};
 	point.y = Math.sin(t);
 	point.x = Math.cos(t);
@@ -238,11 +240,11 @@ var input = _.range(1,19);
 var output = input.map(circle);
 
 var options1 = { r: 64 };
-options1["stroke"] = 'green';
+options1.stroke = 'green';
 options1["stroke-width"] = 5;
 
 var options2 = { r: 6 };
-options2["stoke"] = 'black';
+options2.stoke = 'black';
 options2["stroke-width"] = 3;
 
 ///
