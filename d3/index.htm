@@ -192,6 +192,11 @@ var applying = function (routine) {
 	};
 };
 
+var stroke = function () {
+	var colors = [ 'red', 'yellow', 'green', 'blue', 'black', 'white' ];
+	return colors[Math.floor(Math.random() * colors.length)];
+};
+
 function load(canvas, file, options) {
 	var drawing, ts, xs, ys;
 	d3.json(file, function (error, data) {
@@ -215,7 +220,7 @@ function load(canvas, file, options) {
 		canvas.append('path')
 			.attr('d', linearSpline(scaled))
 			.attr('fill', 'none')
-			.attr('stroke', 'white')
+			.attr('stroke', stroke())
 			.attr('stroke-width', 5);
 		canvas.selectAll('g').each(function () {
 			// probably could use 'apply'
